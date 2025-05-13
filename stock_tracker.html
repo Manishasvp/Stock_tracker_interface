@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 40px;
+      color: #333;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 30px;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2a4d69;
+    }
+
+    .search-box {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      width: 70%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .search-box button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      background-color: #2a4d69;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .stock-info {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .stock-info h2 {
+      margin-bottom: 10px;
+    }
+
+    .stock-info p {
+      margin: 5px 0;
+      font-size: 18px;
+    }
+
+    .error {
+      color: red;
+      text-align: center;
+      font-size: 18px;
+      display: none;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .positive {
+      color: green;
+    }
+
+    .negative {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Stock Tracker</h1>
+    <div class="search-box">
+      <input type="text" id="stockSymbol" placeholder="Enter Stock Symbol (e.g., AAPL)" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="loading" id="loading" style="display: none;">Loading...</div>
+
+    <div class="stock-info" id="stockInfo">
+      <h2>Stock Information</h2>
+      <p><strong>Symbol:</strong> <span id="symbol">N/A</span></p>
+      <p><strong>Price:</strong> $<span id="price">0.00</span></p>
+      <p><strong>Change:</strong> <span id="change">0.00%</span></p>
+      <p><strong>Last Updated:</strong> <span id="lastUpdated">N/A</span></p>
+    </div>
+
+    <div class="error" id="error">Invalid stock symbol or failed to fetch data. Please try again.</div>
+  </div>
+
+  <script>
+    const apiKey = 'YOUR_API_KEY_HERE'; // Replace with your Alpha Vantage API Key
+    const searchBtn = document.getElementById('searchBtn');
+    const stockSymbolInput = document.getElementById('stockSymbol');
+    const stockInfoDiv = document.getElementById('stockInfo');
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const symbolSpan = document.getElementById('symbol');
+    const priceSpan = document.getElementById('price');
+    const changeSpan = document.getElementById('change');
+    const lastUpdatedSpan = document.getElementById('lastUpdated');
+
+    searchBtn.addEventListener('click', () => {
+      const symbol = stockSymbolInput.value.trim().toUpperCase();
+
+      if (symbol) {
+        fetchStockData(symbol);
+      } else {
+        alert('Please enter a valid stock symbol.');
+      }
+    });
+
+    async function fetchStockData(symbol) {
+      loadingDiv.style.display = 'block';
+      stockInfoDiv.style.display = 'none';
+      errorDiv.style.display = 'none';
+
+      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${apiKey}`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data['Time Series (5min)']) {
+          const latestTime = Object.keys(data['Time Series (5min)'])[0];
+          const stockData = data['Time Series (5min)'][latestTime];
+
+          const price = stockData['1. open'];
+          const change = ((stockData['1. open'] - stockData['4. close']) / stockData['4. close']) * 100;
+          const lastUpdated = latestTime;
+
+          displayStockData(symbol, price, change.toFixed(2), lastUpdated);
+        } else {
+          showError();
+        }
+      } catch (error) {
+        showError();
+      }
+    }
+
+    function displayStockData(symbol, price, change, lastUpdated) {
+      loadingDiv.style.display = 'none';
+      stockInfoDiv.style.display = 'block';
+
+      symbolSpan.textContent = symbol;
+      priceSpan.textContent = price;
+      changeSpan.textContent = `${change}%`;
+      lastUpdatedSpan.textContent = lastUpdated;
+
+      if (change >= 0) {
+        changeSpan.classList.add('positive');
+        changeSpan.classList.remove('negative');
+      } else {
+        changeSpan.classList.add('negative');
+        changeSpan.classList.remove('positive');
+      }
+    }
+
+    function showError() {
+      loadingDiv.style.display = 'none';
+      errorDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
